@@ -1,26 +1,59 @@
 import { useForm } from "react-hook-form";
 import { AddTopicType, addTopicSchema } from "@shared/validation/topics";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
-import { MdOutlineDone } from "react-icons/md";
+import { useEffect, useState } from "react";
+// import { MdOutlineDone } from "react-icons/md";
+import { v4 as uuidv4 } from "uuid";
+
 // import Dropdown from "./unit/Dropdown";
+
+type AddTopicTypeExtended = AddTopicType & {
+  reminderDates: Date[];
+};
 
 const AddTopicForm = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<AddTopicType>({
+  } = useForm<AddTopicTypeExtended>({
     resolver: zodResolver(addTopicSchema),
   });
 
-//   const [topics, setTopics] = useState<(AddTopicType & { id: number })[]>([]);
+  const [topics, setTopics] = useState<AddTopicTypeExtended[]>([]);
 
   const onSubmit = handleSubmit((data) => {
+    const plan = data.revisionType;
+
     const newTopic = {
-      id: new Date().getTime(),
+      id: uuidv4(),
+      createdAt: new Date(),
       ...data,
     };
+
+    if (plan === "1-3-7-21") {
+      const todaysDate = new Date();
+      console.log(
+        "todaysDate",
+        todaysDate,
+        new Date(Date.parse("2024-07-06T15:31:08.684Z")).toLocaleDateString()
+      );
+      const addDays = (date: Date, days: number) => {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+      };
+
+      const reminderDates = [
+        addDays(new Date(Date.parse("2024-07-04T15:31:08.684Z")), 1),
+        addDays(todaysDate, 1),
+        addDays(todaysDate, 3),
+        addDays(todaysDate, 7),
+        addDays(todaysDate, 21),
+      ];
+
+      newTopic.reminderDates = reminderDates;
+    }
 
     const currentSchedule = localStorage.getItem("revisionSchedule");
 
@@ -36,34 +69,26 @@ const AddTopicForm = () => {
     }
   });
 
-  setInterval(() => {
-    console.log("checking ....");
-    const currentSchedule = localStorage.getItem("revisionSchedule");
+  const getTodaysPlan = () => {
+    const schedule = localStorage.getItem("revisionSchedule");
 
-    if (!currentSchedule || !currentSchedule.length) {
-      setTopics([]);
-    } else {
-      const revisionSchedule = JSON.parse(currentSchedule);
-
-      const relevantTopics = revisionSchedule.filter(
-        (topic: AddTopicType & { id: number }) => {
-          const createdAt = topic.id;
-
-          const currTime = new Date().getTime();
-
-          console.log("currTime - createdAt", (currTime - createdAt) / 60);
-
-          if ([1, 3, 7, 21].includes(Math.abs((currTime - createdAt) / 60))) {
-            return true;
-          }
-        }
+    if (schedule?.length) {
+      const scheduleArr = JSON.parse(schedule);
+      const todaysPlan = scheduleArr.filter((topic: AddTopicTypeExtended) =>
+        topic?.reminderDates.some(
+          (date: Date) =>
+            Date.parse(new Date(date).toDateString()) ===
+            Date.parse(new Date().toDateString())
+        )
       );
 
-      if (relevantTopics.length) {
-        setTopics(relevantTopics);
-      }
+      setTopics(todaysPlan);
     }
-  }, 60000);
+  };
+
+  useEffect(() => {
+    getTodaysPlan();
+  }, []);
 
   return (
     <>
@@ -129,55 +154,36 @@ const AddTopicForm = () => {
           Add
         </button>
       </form>
-      <div className="gap-y-4 mt-8">
-        <h1 className="text-xl font-bold">Today's Plan</h1>
-        <div className="flex flex-col gap-y-3">
-          <div className="border flex items-center border-md p-2 rounded-lg">
-            <div className="p-3 bg-purple-300 rounded-md min-w-14 text-center">
-              5th
-            </div>
-            <div className="flex flex-col flex-1 pl-3">
-              <div className="flex items-center">Chemical Kinetics</div>
-              <div className="text-xs bg-gray-200 w-fit rounded-md py-0.5 px-1">
-                Thermodynamics
+      {topics.length > 0 ? (
+        <div className="gap-y-4 mt-8">
+          <h1 className="text-xl font-bold">Today's Plan</h1>
+          <div className="flex flex-col gap-y-3 ">
+            {topics.map((topic: AddTopicType, idx: number) => (
+              <div
+                className="border flex items-center border-md p-2 rounded-lg"
+                key={idx + 1}
+              >
+                {/* <div className="p-3 bg-purple-300 rounded-md min-w-14 text-center">
+                5th
+              </div> */}
+                <div className="flex flex-col flex-1 pl-3">
+                  <div className="flex items-center">{topic.topic}</div>
+                  <div className="text-xs bg-gray-200 w-fit rounded-md py-0.5 px-1">
+                    {topic.domain}
+                  </div>
+                </div>
+                {/* <div className="p-1 bg-green-300 rounded-md">
+                <MdOutlineDone className="text-4xl" />
+              </div> */}
               </div>
-            </div>
-            <div className="p-1 bg-green-300 rounded-md">
-              <MdOutlineDone className="text-4xl" />
-            </div>
-          </div>
-          <div className="border flex items-center border-md p-2 rounded-lg">
-            <div className="p-3 bg-cyan-200 rounded-md min-w-14 text-center">
-              2nd
-            </div>
-            <div className="flex flex-col flex-1 pl-3">
-              <div className="flex items-center">Vorticity Stream</div>
-              <div className="text-xs bg-gray-200 w-fit rounded-md py-0.5 px-1">
-                Computational fluid dynamics
-              </div>
-            </div>
-            <div className="p-1 bg-green-300 rounded-md">
-              <MdOutlineDone className="text-4xl" />
-            </div>
-          </div>
-          <div className="border flex items-center border-md p-2 rounded-lg">
-            <div className="p-3 bg-blue-300 rounded-md min-w-14 text-center">
-              1st
-            </div>
-            <div className="flex flex-col flex-1 pl-3">
-              <div className="flex items-center">
-                Kinematic Steering Analysis
-              </div>
-              <div className="text-xs bg-gray-200 w-fit rounded-md py-0.5 px-1">
-                Automotive Systems
-              </div>
-            </div>
-            <div className="p-1 bg-green-300 rounded-md">
-              <MdOutlineDone className="text-4xl" />
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      ) : (
+        <h1 className="font-bold text-xl text-center mt-20">
+          No topics to revise today
+        </h1>
+      )}
     </>
   );
 };

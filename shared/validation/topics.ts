@@ -13,9 +13,9 @@ const RevisionTypeEnum = z.enum(["1-3-7-21", "daily"], {
 export const addTopicSchema = z.object({
   topic: z.string().min(1, "Topic is required"),
   domain: z.string().min(1, "Domain is required").optional(),
-  revisionType: z.string().min(1, "Topic is required"),
-//   domain: domainSchema,
-//   revisionType: RevisionTypeEnum,
+  revisionType: z.string().min(1, "Revision plan is required"),
+  //   domain: domainSchema,
+  //   revisionType: RevisionTypeEnum,
 });
 
 export type AddTopicType = z.infer<typeof addTopicSchema>;
